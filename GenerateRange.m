@@ -1,6 +1,13 @@
-function [SearchingMask] = GenerateRange( SearchingRadius )
-%CALCDIRECTION Summary of this function goes here
-%   Detailed explanation goes here
+function [SearchingMask] = GenerateRange( SearchingRadius, Mask )
+% Function to generate the searching range of the skeleton map in the
+% reference map
+% Input:  SearchingRadius --> searching radius of each pixel in the reference skeleton
+%                            map, the value of each pixel in the
+%                            SearchingRadius is the radius of the pixel in
+%                            the reference skeleton map
+%         Mask -->  the FOV mask of the fundus image
+% Output: SearchingMask -->  the mask denotes the searching range
+
 [height, width] = size(SearchingRadius);
 SearchingMask = zeros(height, width, 'uint8');
 for x = 1:height
@@ -23,3 +30,4 @@ for x = 1:height
         end
     end
 end
+SearchingMask = SearchingMask.*Mask;

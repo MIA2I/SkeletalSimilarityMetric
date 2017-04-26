@@ -1,11 +1,19 @@
 function [ SegmentID ] = SegmentSkeleton( RefSkeleton, minLength, avgLength)
-%SEGMENTSKELETON Summary of this function goes here
-%   Detailed explanation goes here
+% Function to segment the whole skeleton into small segments
+% Input:  RefSkeleton --> the reference skeleton map
+%         minLength --> the minimum length of the skeleton segment
+%         avgLength --> the predefined average length of the skeleton segment
+%Output:  SegmentID --> the ID index array of each segment
 
+[height, width] = size(RefSkeleton);
 % Removing intersecting pixels
 [X, Y] = find(RefSkeleton>0);
 for Index = 1:length(X)
-    if (sum(sum(RefSkeleton(X(Index)-1:X(Index)+1, Y(Index)-1:Y(Index)+1)))>3)
+    top = max(X(Index) - 1, 1);
+    bottom = min(X(Index) + 1, height);
+    left = max(Y(Index) - 1, 1);
+    right = min(Y(Index) + 1, width);
+    if (sum(sum(RefSkeleton(top:bottom, left:right)))>3)
         RefSkeleton(X(Index),Y(Index)) = 0;
     end
 end
@@ -36,13 +44,18 @@ for Index = 1:num
 end
 
 function [ UpdateSegmentID ] = CutSegment(Segment, L, Index, ID, AvgLength)
-
+% Function to cut the skeleton segment into smaller segments
+[height, width] = size(Segment);
 UpdateSegmentID = Segment;
 nums = floor(double(L)/AvgLength);
 TarLength = round(double(L) / nums);
 [X, Y] = find(Segment>0);
 for index = 1:length(X)
-    if(sum(sum(Segment(X(index)-1:X(index)+1, Y(index)-1:Y(index)+1)))==2)
+    top = max(X(index) - 1, 1);
+    bottom = min(X(index) + 1, height);
+    left = max(Y(index) - 1, 1);
+    right = min(Y(index) + 1, width);
+    if(sum(sum(Segment(top:bottom, left:right)))==2)
         startX = X(index);
         startY = Y(index);
         break;

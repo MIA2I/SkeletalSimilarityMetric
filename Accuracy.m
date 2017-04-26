@@ -9,7 +9,8 @@ FP = 0;
 Total = 0;
 
 [height, width, rim] = size(predLabel);
-
+predLabel(predLabel>0) = 1;
+Label(Label>0) = 1;
 for i = 1: height
     for j= 1: width
         if(mask(i,j) > 0)
@@ -31,10 +32,6 @@ for i = 1: height
 end
 
 N = TP + TN + FP + FN;
-
-if (N == Total)
-    display('True!');
-end
 
 S = double(TP + FN) / double(N);
 P = double(TP + FP) / double(N);
