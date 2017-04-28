@@ -17,8 +17,10 @@ avgLength = 15; % the predefined average length of the skeleton segment
 %Initialization
 Mask(Mask>0) = 1;
 [height, width] = size(RefVessels);
+SrcVessels = uint8(SrcVessels);
 SrcVessels(SrcVessels>0) = 1;
 SrcSkeleton = bwmorph(SrcVessels,'thin',inf);
+RefVessels = uint8(RefVessels);
 RefVessels(RefVessels>0) = 1;
 RefSkeleton = bwmorph(RefVessels,'thin',inf);
 
