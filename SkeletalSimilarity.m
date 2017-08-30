@@ -1,4 +1,4 @@
-function [ rSe, rSp, rAcc, SS, Confidence ] = SkeletalSimilarity( SrcVessels, RefVessels, Mask )
+function [ rSe, rSp, rAcc, SS, Confidence, SearchingMask ] = SkeletalSimilarity( SrcVessels, RefVessels, Mask, Alpha, Levels )
 % If you find the metrics useful, please cite the following paper:
 % Z. Yan, X. Yang and K. -T. Cheng, "A skeletal similarity metric for
 % quality evaluation of retinal vessel segmentation," in the corresponding
@@ -10,8 +10,6 @@ function [ rSe, rSp, rAcc, SS, Confidence ] = SkeletalSimilarity( SrcVessels, Re
 %         SS --> the skeletal similarity score
 %         Confidence --> the overall confidence of the whole evaluation
 
-%Hyperparameters
-Levels = 3;
 minLength = 8; % the predefined minimum length of the skeleton segment
 avgLength = 15; % the predefined average length of the skeleton segment
 %Initialization
@@ -25,12 +23,16 @@ RefVessels(RefVessels>0) = 1;
 RefSkeleton = bwmorph(RefVessels,'thin',inf);
 
 % Generate the searching range of each pixel
-[ Thickness, minRadius, maxRadius ] = CalcThickness( RefSkeleton, RefVessels);
-bin = floor(maxRadius - minRadius) / Levels;
-SearchingRadius = 2 * ones(height, width, 'uint8');
-SearchingRadius(Thickness<bin+minRadius) = 3;
-SearchingRadius(Thickness>2*bin+minRadius) = 1;
+[ RefThickness, RefminRadius, RefmaxRadius ] = CalcThickness( RefSkeleton, RefVessels);
+
+bin = (RefmaxRadius - RefminRadius) * 1.0 / Levels;
+SearchingRadius = ceil((RefmaxRadius - RefThickness + 0.0001) * 1.0 / bin);
+SearchingRadius = min(SearchingRadius, Levels);
 SearchingRadius(RefSkeleton==0) = 0;
+
+% Calc the vessel thickness of each pixel in Src
+[ SrcThickness, SrcminRadius, SrcmaxRadius ] = CalcThickness( SrcSkeleton, SrcVessels);
+
 SearchingMask = GenerateRange(SearchingRadius, Mask);
 % Delete wrong skeleton segments
 SrcSkeleton(SearchingMask==0) = 0;
@@ -59,16 +61,28 @@ for Index = 1:max(max(SegmentID))
     [SrcX, SrcY] = find(SrcSegment>0);
     [RefX, RefY] = find(SegmentID==Index);
     
+    % Calc average vessel thickness of Src skeleton
+    SkeletonTemp = SrcSkeleton;
+    SkeletonTemp(SrcSegment==0) = 0;
+    SrcAvgThickness = sum(sum(SrcThickness.*SkeletonTemp)) / length(SrcX);
+    % Calc average vessel thickness of Ref skeleton
+    SkeletonTemp = RefSkeleton;
+    SkeletonTemp(SegmentID~=Index) = 0;
+    RefAvgThickness = sum(sum(RefThickness.*SkeletonTemp)) / length(RefX);
+    
+    RefAvgRange = sum(sum(SegmentRadius)) * 1.0 / length(RefX);
+    
     if (length(unique(SrcX)) > length(unique(SrcY)))
-        SS = SS + CalcSimilarity(SrcX, SrcY, RefX, RefY) * length(RefX);
+        SS = SS + CalcSimilarity(SrcX, SrcY, SrcAvgThickness, RefX, RefY, RefAvgThickness, Alpha, RefAvgRange) * length(RefX);
     else
-        SS = SS + CalcSimilarity(SrcY, SrcX, RefY, RefX) * length(RefX);
+        SS = SS + CalcSimilarity(SrcY, SrcX, SrcAvgThickness, RefY, RefX, RefAvgThickness, Alpha, RefAvgRange) * length(RefX);
     end
     
 end
 
 SegmentID(SegmentID>0) = 1;
 SS = SS / sum(sum(SegmentID));
+
 PositiveMask = SearchingMask + RefVessels;
 PositiveMask(PositiveMask>0) = 1;
 PositiveMask(Mask==0) = 0;
@@ -80,7 +94,7 @@ rSe = TP * 100.0 / (TP + FN);
 rSp = TN * 100.0 / (TN + FP);
 rAcc = (TP + TN) * 100 / (TP + FN +TN + FP);
 
-function [ Score ] = CalcSimilarity(SrcX, SrcY, RefX, RefY)
+function [ Score ] = CalcSimilarity(SrcX, SrcY, SrcAvgThickness, RefX, RefY, RefAvgThickness, Alpha, RefAvgRange)
 % Function to calculate the simialrity between two group of discrete pixels
 % in the source and the reference skeleton maps
 % Input:  SrcX, SrcY --> pixels in the source skeleton map that lie in the
@@ -119,7 +133,12 @@ if (length(SrcX) > 0.6 * length(RefX))
     SrcPolyComplete = fit(SrcX, SrcY, 'poly3');
     SrcPoly = [SrcPolyComplete.p1, SrcPolyComplete.p2, SrcPolyComplete.p3];
     
-    Score = abs(dot(SrcPoly, RefPoly) / (norm(SrcPoly) + 1e-10) / norm(RefPoly + 1e-10));
+    Similarity = abs(dot(SrcPoly, RefPoly) / (norm(SrcPoly) + 1e-10) / norm(RefPoly + 1e-10));
+    
+    Thickness = 1.0 - abs(RefAvgThickness-SrcAvgThickness) * 1.0 / RefAvgRange;
+    Thickness = max(Thickness, 0);
+    
+    Score = (1 - Alpha) * Similarity + Alpha * Thickness;
     
 end
 
