@@ -5,16 +5,18 @@ warning off;
 
 % Input vessel segmentation maps: 
 % Guarantee: "1" represents vessel pixel and "0" denotes non-vessel pixel
-SrcVessels = uint8(imread('./Data/STARE/im0162_manual2.png'));
+SrcVessels = uint8(imread('./Data/STARE/im0163_manual2.png'));
 SrcVessels(SrcVessels>0) = 1;
-RefVessels = imread('./Data/STARE/im0162_manual1.png');
+% SrcVessels = 1 - SrcVessels;
+RefVessels = imread('./Data/STARE/im0163_manual1.png');
 RefVessels(RefVessels>0) = 1;
+% RefVessels = 1 - RefVessels;
 
-Mask = imread('./Data/STARE/im0162_mask.png');
+Mask = imread('./Data/STARE/im0163_mask.png');
 
 % Hyperparameter
-Alpha = 0.8;
 R = 2;
+Alpha = 0.2;
 
 % Traditional Se, Sp and Acc
 [ Se, Sp, Precision, F1, G, MCC, Acc ] = Accuracy( SrcVessels, RefVessels, Mask);
@@ -31,5 +33,13 @@ disp(result);
 % Skeletal similarity for r-Se, r-Sp and r-Acc
 [ rSe, rSp, rAcc, SS, Confidence, SearchingMask ] = SkeletalSimilarity( SrcVessels, RefVessels, Mask, Alpha, R );
 % Didplay results
-result=sprintf('SS = %.3g, rSe = %.3g, rSp = %.3g, rAcc = %.3g.', SS, rSe/100.0, rSp/100.0, rAcc/100.0);
+result=sprintf('Confidence = %.3g, rSe = %.3g, rSp = %.3g, rAcc = %.3g.', Confidence, rSe/100.0, rSp/100.0, rAcc/100.0);
 disp(result);
+
+%     % Rnc for centerline detection
+%     SrcSkeleton = uint8(bwmorph(SrcVessels,'thin',inf));
+%     RefSkeleton = uint8(bwmorph(RefVessels,'thin',inf));
+%     Rnc = sum(sum(SrcSkeleton-SearchingMask.*SrcSkeleton)) * 1.0 / sum(sum(RefSkeleton));
+%     % Didplay results
+%     result=sprintf('Rnc = %.3g.', Rnc);
+%     disp(result);

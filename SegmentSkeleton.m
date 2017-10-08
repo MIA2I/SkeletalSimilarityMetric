@@ -1,13 +1,15 @@
-function [ SegmentID ] = SegmentSkeleton( RefSkeleton, minLength, avgLength)
+function [ SegmentID ] = SegmentSkeleton( RefSkeleton, minLength, maxLength)
 % Function to segment the whole skeleton into small segments
 % Input:  RefSkeleton --> the reference skeleton map
 %         minLength --> the minimum length of the skeleton segment
-%         avgLength --> the predefined average length of the skeleton segment
+%         maxLength --> the predefined maximum length of the skeleton segment
 %Output:  SegmentID --> the ID index array of each segment
 
 [height, width] = size(RefSkeleton);
+RefSkeleton=uint8(RefSkeleton);
 % Removing intersecting pixels
 [X, Y] = find(RefSkeleton>0);
+IntersectingPixel = RefSkeleton;
 for Index = 1:length(X)
     top = max(X(Index) - 1, 1);
     bottom = min(X(Index) + 1, height);
@@ -17,7 +19,7 @@ for Index = 1:length(X)
         RefSkeleton(X(Index),Y(Index)) = 0;
     end
 end
-
+IntersectingPixel = IntersectingPixel - RefSkeleton;
 % Delete segments smaller than minLength
 [L, num] = bwlabel(RefSkeleton, 8);
 for Index = 1:num
@@ -25,9 +27,10 @@ for Index = 1:num
    Component(L~=Index) = 0;
    Component(Component>0) = 1;
    if (sum(sum(Component))<minLength)
-       RefSkeleton(L==Index)=0;
+       RefSkeleton(L==Index) = 0;
    end
 end
+
 [L, num] = bwlabel(RefSkeleton, 8);
 SegmentID = L;
 % Cut segments longer than maxLength
@@ -36,18 +39,35 @@ for Index = 1:num
    Component(Component~=Index) = 0;
    Component(Component>0) = 1;
    L = sum(sum(Component));
-   if (L>avgLength)
+   if (L>maxLength)
        SegmentID(SegmentID==Index) = 0;
-       UpdateSegmentID = CutSegment(Component, L, Index, max(max(SegmentID)), avgLength);
+       UpdateSegmentID = CutSegment(Component, L, Index, max(max(SegmentID)), maxLength);
        SegmentID = SegmentID + UpdateSegmentID;
    end
 end
+% Assign ID to intersecting pixels
+[X, Y] = find(IntersectingPixel>0);
+for Index = 1:length(X)
+    top = max(X(Index) - 1, 1);
+    bottom = min(X(Index) + 1, height);
+    left = max(Y(Index) - 1, 1);
+    right = min(Y(Index) + 1, width);
+    IDs = unique(SegmentID(top:bottom, left:right));
+    MinimumLength = 100;
+    ID = 0;
+    for index = 2:length(IDs)
+        if (length(find(SegmentID==IDs(index))) < MinimumLength)
+            ID = IDs(index);
+        end
+    end
+    SegmentID(X(Index),Y(Index)) = ID;
+end
 
-function [ UpdateSegmentID ] = CutSegment(Segment, L, Index, ID, AvgLength)
+function [ UpdateSegmentID ] = CutSegment(Segment, L, Index, ID, maxLength)
 % Function to cut the skeleton segment into smaller segments
 [height, width] = size(Segment);
 UpdateSegmentID = Segment;
-nums = floor(double(L)/AvgLength);
+nums = floor(double(L)/maxLength);
 TarLength = round(double(L) / nums);
 [X, Y] = find(Segment>0);
 for index = 1:length(X)

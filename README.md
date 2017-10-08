@@ -5,4 +5,4 @@ A MATLAB implementation of the skeletal similarity metric for quality evaluation
 
 SkeletalSimilarity.m is the main function of the calculation of skeletal similarity.
 
-Run Example.m to compare the skeletal similarity metric with the traditional evaluation metrics Se, Sp, Acc and CAL.
+Run Example.m to compare the skeletal similarity metric with the traditional evaluation metrics Se, Sp and Acc.

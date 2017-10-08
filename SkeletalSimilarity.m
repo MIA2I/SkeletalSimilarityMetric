@@ -10,8 +10,8 @@ function [ rSe, rSp, rAcc, SS, Confidence, SearchingMask ] = SkeletalSimilarity(
 %         SS --> the skeletal similarity score
 %         Confidence --> the overall confidence of the whole evaluation
 
-minLength = 8; % the predefined minimum length of the skeleton segment
-avgLength = 15; % the predefined average length of the skeleton segment
+minLength = 4; % the predefined minimum length of the skeleton segment
+maxLength = 15; % the predefined maximum length of the skeleton segment
 %Initialization
 Mask(Mask>0) = 1;
 [height, width] = size(RefVessels);
@@ -38,13 +38,13 @@ SearchingMask = GenerateRange(SearchingRadius, Mask);
 SrcSkeleton(SearchingMask==0) = 0;
 
 % Segment the target skeleton map
-[ SegmentID ] = SegmentSkeleton( RefSkeleton, minLength, avgLength );
+[ SegmentID ] = SegmentSkeleton( RefSkeleton, minLength, maxLength );
 SegmentID(Mask==0) = 0;
 % Calculate the confidence
 OriginalSkeleton = RefSkeleton;
 EvaluationSkeleton = SegmentID;
 EvaluationSkeleton(EvaluationSkeleton>0) = 1;
-Confidence = sum(sum(EvaluationSkeleton)) *1.0 / sum(sum(OriginalSkeleton));
+Confidence = sum(sum(EvaluationSkeleton)) * 1.0 / sum(sum(OriginalSkeleton));
 
 % Calculate the skeletal similarity for each segment
 SS = 0.0;
@@ -118,7 +118,7 @@ end
 RefPolyComplete = fit(RefX, RefY, 'poly3');
 RefPoly = [RefPolyComplete.p1, RefPolyComplete.p2, RefPolyComplete.p3];
 
-if (length(SrcX) > 0.6 * length(RefX))
+if ((length(SrcX) > 0.6 * length(RefX)) && (length(SrcX) > 3))
     Temp = []; Temp(1) = SrcX(1);
     index = 2;
     while(index<=length(SrcX))
